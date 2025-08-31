@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Гра Змійка</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 20px;
+      color: white;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      background: #111;
+      box-shadow: 0 0 20px #0f0;
+      margin: 20px 0;
+      width: 100%;
+      max-width: 400px;
+      height: auto;
+    }
+
+    button, .control-btn {
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #0f0;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      margin: 5px;
+    }
+
+    button:hover, .control-btn:hover {
+      background: #0c0;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      grid-gap: 10px;
+      margin-top: 10px;
+    }
+
+    .control-btn {
+      width: 60px;
+      height: 60px;
+      font-weight: bold;
+    }
+
+    .controls .empty {
+      visibility: hidden;
+    }
+
+    @media (min-width: 500px) {
+      .control-btn {
+        width: 70px;
+        height: 70px;
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="400" height="400"></canvas>
+  <button onclick="startGame()">Почати гру</button>
+
+  <div class="controls">
+    <div class="empty"></div>
+    <button class="control-btn" onclick="handleTouch('up')">↑</button>
+    <div class="empty"></div>
+    <button class="control-btn" onclick="handleTouch('left')">←</button>
+    <div class="empty"></div>
+    <button class="control-btn" onclick="handleTouch('right')">→</button>
+    <div class="empty"></div>
+    <button class="control-btn" onclick="handleTouch('down')">↓</button>
+    <div class="empty"></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const gridSize = 20;
+    const tileCount = canvas.width / gridSize;
+
+    let snake, apple, dx, dy, score, gameOver, gameStarted;
+    let gameInterval;
+
+    function resetGame() {
+      snake = [{ x: 10, y: 10 }];
+      apple = { x: 15, y: 15 };
+      dx = 0;
+      dy = 0;
+      score = 0;
+      gameOver = false;
+      gameStarted = false;
+      clearInterval(gameInterval);
+      draw();
+    }
+
+    function startGame() {
+      document.querySelector("button").style.display = "none";
+      resetGame();
+      document.addEventListener("keydown", handleDirection, { once: true });
+    }
+
+    function beginMovement() {
+      gameStarted = true;
+      gameInterval = setInterval(gameLoop, 100);
+      document.addEventListener("keydown", handleDirection);
+    }
+
+    function gameLoop() {
+      if (gameOver || (!dx && !dy)) return;
+
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+      if (
+        head.x < 0 || head.x >= tileCount ||
+        head.y < 0 || head.y >= tileCount ||
+        snake.some(segment => segment.x === head.x && segment.y === head.y)
+      ) {
+        gameOver = true;
+        clearInterval(gameInterval);
+        alert("Гру завершено! Ваш рахунок: " + score);
+        document.querySelector("button").innerText = "Грати ще раз";
+        document.querySelector("button").style.display = "block";
+        return;
+      }
+
+      snake.unshift(head);
+
+      if (head.x === apple.x && head.y === apple.y) {
+        score++;
+        placeApple();
+      } else {
+        snake.pop();
+      }
+
+      draw();
+    }
+
+    function placeApple() {
+      let newApple;
+      do {
+        newApple = {
+          x: Math.floor(Math.random() * tileCount),
+          y: Math.floor(Math.random() * tileCount)
+        };
+      } while (snake.some(segment => segment.x === newApple.x && segment.y === newApple.y));
+      apple = newApple;
+    }
+
+    function draw() {
+      ctx.fillStyle = "#111";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#0f0";
+      for (let segment of snake) {
+        ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
+      }
+
+      ctx.fillStyle = "#f00";
+      ctx.fillRect(apple.x * gridSize, apple.y * gridSize, gridSize - 2, gridSize - 2);
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "16px sans-serif";
+      ctx.fillText("Рахунок: " + score, 10, 20);
+    }
+
+    function handleDirection(e) {
+      if (!gameStarted) beginMovement();
+
+      switch (e.key) {
+        case "ArrowUp":
+        case "w":
+          if (dy === 0) { dx = 0; dy = -1; }
+          break;
+        case "ArrowDown":
+        case "s":
+          if (dy === 0) { dx = 0; dy = 1; }
+          break;
+        case "ArrowLeft":
+        case "a":
+          if (dx === 0) { dx = -1; dy = 0; }
+          break;
+        case "ArrowRight":
+        case "d":
+          if (dx === 0) { dx = 1; dy = 0; }
+          break;
+      }
+    }
+
+    function handleTouch(direction) {
+      if (!gameStarted) beginMovement();
+
+      switch (direction) {
+        case "up":
+          if (dy === 0) { dx = 0; dy = -1; }
+          break;
+        case "down":
+          if (dy === 0) { dx = 0; dy = 1; }
+          break;
+        case "left":
+          if (dx === 0) { dx = -1; dy = 0; }
+          break;
+        case "right":
+          if (dx === 0) { dx = 1; dy = 0; }
+          break;
+      }
+    }
+
+    resetGame();
+  </script>
+</body>
+</html>
